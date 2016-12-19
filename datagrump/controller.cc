@@ -8,9 +8,8 @@ using namespace std;
 /* Default constructor */
 Controller::Controller( const bool debug )
   : debug_( debug )
-  , the_window_size(16)
-  , skewed_lowest_owt(99999)
-  , lowest_rtt(99999)
+  , the_window_size(4)
+  , ewma_rtt(100)
 {}
 
 /* Get current window size, in datagrams */
@@ -48,26 +47,21 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
 {
-    int64_t skewed_owt = recv_timestamp_acked - send_timestamp_acked;
-    if (skewed_owt < skewed_lowest_owt)
-        skewed_lowest_owt = skewed_owt;
+    uint64_t rtt =  timestamp_ack_received - send_timestamp_acked;
 
-    double rtt =  timestamp_ack_received - send_timestamp_acked;
-    if (rtt < lowest_rtt)
-        lowest_rtt = rtt;
-
-    double est_lowest_owt = (lowest_rtt/2);
-    double est_owt = (skewed_owt - skewed_lowest_owt) + est_lowest_owt;
-
-    if (est_owt > 1.45 * est_lowest_owt)
-        the_window_size -= .25;
+    if ( rtt > 2000 )
+        the_window_size -= 1;
+    if ( rtt > 1000 )
+        the_window_size -= .2;
+    else if ( rtt > 600 )
+        the_window_size += .05;
+    else if ( rtt > 400 )
+        the_window_size += .1;
     else
-        the_window_size += .25;
+        the_window_size += 1;
 
     if (the_window_size < 2)
         the_window_size = 2;
-    else if (the_window_size > 100)
-        the_window_size = 100;
 
   if ( debug_ ) {
     cerr << "At time " << timestamp_ack_received
@@ -82,5 +76,5 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
    before sending one more datagram */
 unsigned int Controller::timeout_ms( void )
 {
-  return 50;
+  return 2000;
 }

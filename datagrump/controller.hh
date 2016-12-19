@@ -11,8 +11,6 @@ private:
   bool debug_; /* Enables debugging output */
 
   double the_window_size;
-  double skewed_lowest_owt;
-  double lowest_rtt;
 
 public:
   /* Public interface for the congestion controller */
