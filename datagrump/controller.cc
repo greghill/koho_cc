@@ -9,7 +9,6 @@ using namespace std;
 Controller::Controller( const bool debug )
   : debug_( debug )
   , the_window_size(4)
-  , ewma_rtt(100)
 {}
 
 /* Get current window size, in datagrams */
