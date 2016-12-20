@@ -96,12 +96,15 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
             max_packets_in_flight--;
         } else if ( loss_ewma > .05 ) {
             max_packets_in_flight--;
-        } else if ( rtt_ewma < (min_rtt_seen + 40 ) ) {
+        } else if ( loss_ewma > .02 ) {
+            // don't change window
+        } else if ( rtt_ewma < (min_rtt_seen + 10 ) ) {
+            max_packets_in_flight++;
             max_packets_in_flight++;
             max_packets_in_flight++;
         } else if ( rtt_ewma < (min_rtt_seen + 200 ) ) {
             max_packets_in_flight++;
-        } else if ( rtt > 1200 ) {
+        } else if ( rtt_ewma > 1000 ) {
             max_packets_in_flight--;
         }
         timestamp_window_last_changed = timestamp_ack_received;
@@ -121,5 +124,5 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
    before sending one more datagram */
 unsigned int Controller::timeout_ms( void )
 {
-  return 1000;
+  return 1500;
 }
