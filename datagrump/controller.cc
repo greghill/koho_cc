@@ -15,6 +15,7 @@ Controller::Controller( const bool debug )
   , timestamp_window_last_changed(0)
   , rtt_ewma(100)
   , loss_ewma(0)
+  , min_rtt_seen(1000)
 {}
 
 /* Get current window size, in datagrams
@@ -74,18 +75,33 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
         }
     }
 
-    double rtt =  timestamp_ack_received - send_timestamp_acked;
-    rtt_ewma = rtt * ewma_factor + ( 1 - ewma_factor ) * rtt_ewma;
+    uint64_t rtt = timestamp_ack_received - send_timestamp_acked;
+    min_rtt_seen = min( rtt, min_rtt_seen );
+    rtt_ewma = (double) rtt * ewma_factor + ( 1 - ewma_factor ) * rtt_ewma;
 
-    cout << loss_ewma << endl;
+    //cout << "[";
+    //for ( double increment = 0; increment < 1.; increment+= .01 ) {
+    //    if (increment < loss_ewma)
+    //        cout << "|";
+    //    else
+    //        cout << " ";
+    //}
+    //cout << "]" << endl;
+
     max_packets_in_flight = max( max_packets_in_flight, (uint64_t) 4 );
 
     if ( timestamp_window_last_changed + 10 < timestamp_ack_received ) {
-        if ( loss_ewma > .1 ) {
+        if ( loss_ewma > .5 ) {
             max_packets_in_flight--;
-        } else if ( rtt_ewma < 500 ) {
+            max_packets_in_flight--;
+        } else if ( loss_ewma > .05 ) {
+            max_packets_in_flight--;
+        } else if ( rtt_ewma < (min_rtt_seen + 40 ) ) {
             max_packets_in_flight++;
-        } else if ( rtt > 1000 ) {
+            max_packets_in_flight++;
+        } else if ( rtt_ewma < (min_rtt_seen + 200 ) ) {
+            max_packets_in_flight++;
+        } else if ( rtt > 1200 ) {
             max_packets_in_flight--;
         }
         timestamp_window_last_changed = timestamp_ack_received;

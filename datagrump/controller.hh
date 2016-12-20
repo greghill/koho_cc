@@ -15,6 +15,7 @@ private:
   uint64_t timestamp_window_last_changed;
   double rtt_ewma;
   double loss_ewma;
+  uint64_t min_rtt_seen;
 
 public:
   /* Public interface for the congestion controller */
