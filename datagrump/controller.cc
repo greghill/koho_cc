@@ -1,4 +1,6 @@
 #include <iostream>
+#include <deque>
+#include <algorithm>
 
 #include "controller.hh"
 #include "timestamp.hh"
@@ -8,20 +10,28 @@ using namespace std;
 /* Default constructor */
 Controller::Controller( const bool debug )
   : debug_( debug )
-  , the_window_size(16)
-  , skewed_lowest_owt(99999)
-  , lowest_rtt(99999)
+  , outstanding_datagrams()
+  , max_packets_in_flight(4)
+  , timestamp_window_last_changed(0)
+  , rtt_ewma(100)
+  , loss_ewma(0)
 {}
 
-/* Get current window size, in datagrams */
+/* Get current window size, in datagrams
 unsigned int Controller::window_size( void )
 {
   if ( debug_ ) {
     cerr << "At time " << timestamp_ms()
-        << " window size is " << the_window_size << endl;
+        << " window size is " << outstanding_datagrams.size() << endl;
   }
 
-  return the_window_size;
+  return outstanding_datagrams.size();
+}
+ */
+
+bool Controller::window_open( void )
+{
+  return outstanding_datagrams.size() < max_packets_in_flight;
 }
 
 /* A datagram was sent */
@@ -30,11 +40,12 @@ void Controller::datagram_was_sent( const uint64_t sequence_number,
 				    const uint64_t send_timestamp )
                                     /* in milliseconds */
 {
-  /* Default: take no action */
+  outstanding_datagrams.emplace_back( sequence_number, send_timestamp );
 
   if ( debug_ ) {
     cerr << "At time " << send_timestamp
-	 << " sent datagram " << sequence_number << endl;
+	 << " sent datagram " << sequence_number
+        << " window size is " << outstanding_datagrams.size() << endl;
   }
 }
 
@@ -48,39 +59,51 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
 {
-    int64_t skewed_owt = recv_timestamp_acked - send_timestamp_acked;
-    if (skewed_owt < skewed_lowest_owt)
-        skewed_lowest_owt = skewed_owt;
+    const double ewma_factor = .1;
+    while ( ( outstanding_datagrams.front().second + 100 ) < send_timestamp_acked ) {
+        outstanding_datagrams.pop_front();
+        loss_ewma = 1. * ewma_factor + ( 1 - ewma_factor ) * loss_ewma;
+    }
+    // for the packet that made it
+    loss_ewma = 0. * ewma_factor + ( 1 - ewma_factor ) * loss_ewma;
+
+    for ( auto sent_datagram = outstanding_datagrams.begin(); sent_datagram != outstanding_datagrams.end(); sent_datagram++ ) {
+        if ( sent_datagram->first == sequence_number_acked ) {
+            outstanding_datagrams.erase( sent_datagram );
+            break;
+        }
+    }
 
     double rtt =  timestamp_ack_received - send_timestamp_acked;
-    if (rtt < lowest_rtt)
-        lowest_rtt = rtt;
+    rtt_ewma = rtt * ewma_factor + ( 1 - ewma_factor ) * rtt_ewma;
 
-    double est_lowest_owt = (lowest_rtt/2);
-    double est_owt = (skewed_owt - skewed_lowest_owt) + est_lowest_owt;
+    cout << loss_ewma << endl;
+    max_packets_in_flight = max( max_packets_in_flight, (uint64_t) 4 );
 
-    if (est_owt > 1.45 * est_lowest_owt)
-        the_window_size -= .25;
-    else
-        the_window_size += .25;
+    if ( timestamp_window_last_changed + 10 < timestamp_ack_received ) {
+        if ( loss_ewma > .1 ) {
+            max_packets_in_flight--;
+        } else if ( rtt_ewma < 500 ) {
+            max_packets_in_flight++;
+        } else if ( rtt > 1000 ) {
+            max_packets_in_flight--;
+        }
+        timestamp_window_last_changed = timestamp_ack_received;
+    }
 
-    if (the_window_size < 2)
-        the_window_size = 2;
-    else if (the_window_size > 100)
-        the_window_size = 100;
-
-  if ( debug_ ) {
-    cerr << "At time " << timestamp_ack_received
-	 << " received ack for datagram " << sequence_number_acked
-	 << " (send @ time " << send_timestamp_acked
-	 << ", received @ time " << recv_timestamp_acked << " by receiver's clock)"
-	 << endl;
-  }
+    if ( debug_ ) {
+        cerr << "At time " << timestamp_ack_received
+            << " received ack for datagram " << sequence_number_acked
+            << " (send @ time " << send_timestamp_acked
+            << ", received @ time " << recv_timestamp_acked << " by receiver's clock)"
+            << rtt
+            << endl;
+    }
 }
 
 /* How long to wait (in milliseconds) if there are no acks
    before sending one more datagram */
 unsigned int Controller::timeout_ms( void )
 {
-  return 50;
+  return 1000;
 }

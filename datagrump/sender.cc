@@ -27,7 +27,6 @@ private:
 
   void send_datagram( void );
   void got_ack( const uint64_t timestamp, const ContestMessage & msg );
-  bool window_is_open( void );
 
 public:
   DatagrumpSender( const char * const host, const char * const port,
@@ -98,7 +97,7 @@ void DatagrumpSender::got_ack( const uint64_t timestamp,
 void DatagrumpSender::send_datagram( void )
 {
   /* All messages use the same dummy payload */
-  static const string dummy_payload( 1424, 'x' );
+  static const string dummy_payload( 1388, 'x' );
 
   ContestMessage cm( sequence_number_++, dummy_payload );
   cm.set_send_timestamp();
@@ -109,10 +108,12 @@ void DatagrumpSender::send_datagram( void )
 				 cm.header.send_timestamp );
 }
 
+/*
 bool DatagrumpSender::window_is_open( void )
 {
   return sequence_number_ - next_ack_expected_ < controller_.window_size();
 }
+*/
 
 int DatagrumpSender::loop( void )
 {
@@ -123,13 +124,13 @@ int DatagrumpSender::loop( void )
      sending more datagrams */
   poller.add_action( Action( socket_, Direction::Out, [&] () {
 	/* Close the window */
-	while ( window_is_open() ) {
+	while ( controller_.window_open() ) {
 	  send_datagram();
 	}
 	return ResultType::Continue;
       },
       /* We're only interested in this rule when the window is open */
-      [&] () { return window_is_open(); } ) );
+      [&] () { return controller_.window_open(); } ) );
 
   /* second rule: if sender receives an ack,
      process it and inform the controller
