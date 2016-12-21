@@ -17,9 +17,7 @@ Controller::Controller( const bool debug )
   , outstanding_datagrams()
   , max_packets_in_flight(MIN_WINDOW_SIZE)
   , timestamp_window_last_changed(0)
-  , rtt_ewma(100)
   , loss_ewma(0)
-  , min_rtt_seen(1000)
 {}
 
 /* Get current window size, in datagrams
@@ -88,10 +86,6 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
         previous_sequence_number = sent_datagram->first;
     }
 
-    uint64_t rtt = timestamp_ack_received - send_timestamp_acked;
-    min_rtt_seen = min( rtt, min_rtt_seen );
-    rtt_ewma = (double) rtt * ewma_factor + ( 1 - ewma_factor ) * rtt_ewma;
-
     //cout << "[";
     //for ( double increment = 0; increment < 1.; increment+= .01 ) {
     //    if (increment < loss_ewma)
@@ -109,17 +103,10 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
             max_packets_in_flight--;
         } else if ( loss_ewma > .05 ) {
             max_packets_in_flight--;
-        } else if ( loss_ewma > .02 ) {
-            // don't change window
-        } else if ( rtt_ewma < (min_rtt_seen + 10 ) ) {
+        } else {
             max_packets_in_flight++;
-            max_packets_in_flight++;
-            max_packets_in_flight++;
-        } else if ( rtt_ewma < (min_rtt_seen + 200 ) ) {
-            max_packets_in_flight++;
-        } else if ( rtt_ewma > 1000 ) {
-            max_packets_in_flight--;
         }
+            // don't change window
         timestamp_window_last_changed = timestamp_ack_received;
     }
 
@@ -128,7 +115,6 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
             << " received ack for datagram " << sequence_number_acked
             << " (send @ time " << send_timestamp_acked
             << ", received @ time " << recv_timestamp_acked << " by receiver's clock)"
-            << rtt
             << endl;
     }
 }
