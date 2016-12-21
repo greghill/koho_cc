@@ -13,8 +13,8 @@ Controller::Controller( const bool debug )
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size( void )
 {
-  /* Default: fixed window size of 100 outstanding datagrams */
-  unsigned int the_window_size = 50;
+  /* fixed window size of 1 outstanding datagram */
+  unsigned int the_window_size = 1;
 
   if ( debug_ ) {
     cerr << "At time " << timestamp_ms()
