@@ -61,7 +61,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
                                /* when the ack was received (by sender) */
 {
     const double ewma_factor = .1;
-    while ( ( outstanding_datagrams.front().second + 100 ) < send_timestamp_acked ) {
+    while ( ( outstanding_datagrams.front().second + 10 ) < send_timestamp_acked ) {
         outstanding_datagrams.pop_front();
         loss_ewma = 1. * ewma_factor + ( 1 - ewma_factor ) * loss_ewma;
     }
