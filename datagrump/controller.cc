@@ -5,13 +5,16 @@
 #include "controller.hh"
 #include "timestamp.hh"
 
+#define MIN_WINDOW_SIZE 2
+#define MAX_REORDER_MS 10
+
 using namespace std;
 
 /* Default constructor */
 Controller::Controller( const bool debug )
   : debug_( debug )
   , outstanding_datagrams()
-  , max_packets_in_flight(4)
+  , max_packets_in_flight(MIN_WINDOW_SIZE)
   , timestamp_window_last_changed(0)
   , rtt_ewma(100)
   , loss_ewma(0)
@@ -61,7 +64,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
                                /* when the ack was received (by sender) */
 {
     const double ewma_factor = .1;
-    while ( ( outstanding_datagrams.front().second + 10 ) < send_timestamp_acked ) {
+    while ( ( outstanding_datagrams.front().second + MAX_REORDER_MS ) < send_timestamp_acked ) {
         outstanding_datagrams.pop_front();
         loss_ewma = 1. * ewma_factor + ( 1 - ewma_factor ) * loss_ewma;
     }
@@ -88,7 +91,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     //}
     //cout << "]" << endl;
 
-    max_packets_in_flight = max( max_packets_in_flight, (uint64_t) 4 );
+    max_packets_in_flight = max( max_packets_in_flight, (uint64_t) MIN_WINDOW_SIZE );
 
     if ( timestamp_window_last_changed + 10 < timestamp_ack_received ) {
         if ( loss_ewma > .5 ) {
