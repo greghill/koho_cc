@@ -63,7 +63,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
 {
-    const double short_term_ewma_factor = .1;
+    const double short_term_ewma_factor = .05;
     const double long_term_ewma_factor = .001;
     while ( ( outstanding_datagrams.front().second + MAX_REORDER_MS ) < send_timestamp_acked ) {
         outstanding_datagrams.pop_front();
@@ -101,21 +101,31 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 
     max_packets_in_flight = max( max_packets_in_flight, (uint64_t) MIN_WINDOW_SIZE );
 
-    if (short_term_loss_ewma > .2) {
+    if (timestamp_window_last_changed + 20 < timestamp_ack_received) {
+        if ( short_term_loss_ewma < .1 and long_term_loss_ewma < .01) {
+            max_packets_in_flight++;
+            cout << "^";
+            timestamp_window_last_changed = timestamp_ack_received;
+            cout << max_packets_in_flight;
+        } else {
             // freeze change window
-        cout << "-";
-        timestamp_window_last_changed = timestamp_ack_received;
-        cout << max_packets_in_flight;
-    } else if (timestamp_window_last_changed + 1 < timestamp_ack_received and short_term_loss_ewma < .1 and long_term_loss_ewma < .1) {
-        max_packets_in_flight++;
-        cout << "^";
-        timestamp_window_last_changed = timestamp_ack_received;
-        cout << max_packets_in_flight;
-    } else if (timestamp_window_last_changed + 100 < timestamp_ack_received and short_term_loss_ewma < .2 and long_term_loss_ewma < .2) {
-        max_packets_in_flight--;
-        cout << "v";
-        timestamp_window_last_changed = timestamp_ack_received;
-        cout << max_packets_in_flight;
+            cout << "-";
+            cout << max_packets_in_flight;
+        }
+    }
+
+    if ( timestamp_window_last_changed + 200 < timestamp_ack_received ) {
+        if ( short_term_loss_ewma > .2 and long_term_loss_ewma > .2 ) {
+            max_packets_in_flight--;
+            cout << "v";
+            timestamp_window_last_changed = timestamp_ack_received;
+            cout << max_packets_in_flight;
+        } if ( short_term_loss_ewma < .5 and long_term_loss_ewma < .10 ) {
+            max_packets_in_flight++;
+            cout << "^";
+            timestamp_window_last_changed = timestamp_ack_received;
+            cout << max_packets_in_flight;
+        }
     }
     cout << endl;
 
