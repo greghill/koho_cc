@@ -1,5 +1,6 @@
 #include <iostream>
 #include <deque>
+#include <cassert>
 #include <algorithm>
 
 #include "controller.hh"
@@ -68,14 +69,23 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
         outstanding_datagrams.pop_front();
         loss_ewma = 1. * ewma_factor + ( 1 - ewma_factor ) * loss_ewma;
     }
-    // for the packet that made it
-    loss_ewma = 0. * ewma_factor + ( 1 - ewma_factor ) * loss_ewma;
 
+    uint64_t previous_sequence_number = 0;
     for ( auto sent_datagram = outstanding_datagrams.begin(); sent_datagram != outstanding_datagrams.end(); sent_datagram++ ) {
         if ( sent_datagram->first == sequence_number_acked ) {
             outstanding_datagrams.erase( sent_datagram );
+            // packet delivered
+            loss_ewma = 0. * ewma_factor + ( 1 - ewma_factor ) * loss_ewma;
             break;
         }
+        if ( sent_datagram->first > sequence_number_acked ) {
+            // ack for packet we already considered lost
+            break;
+        }
+
+        // sanity check sequence numbers monotonic increasing in deque
+        assert( previous_sequence_number < sent_datagram->first );
+        previous_sequence_number = sent_datagram->first;
     }
 
     uint64_t rtt = timestamp_ack_received - send_timestamp_acked;
