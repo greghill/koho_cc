@@ -13,7 +13,8 @@ private:
   std::deque<std::pair<uint64_t, uint64_t>> outstanding_datagrams;
   uint64_t max_packets_in_flight;
   uint64_t timestamp_window_last_changed;
-  double loss_ewma;
+  double short_term_loss_ewma;
+  double long_term_loss_ewma;
 
 public:
   /* Public interface for the congestion controller */
