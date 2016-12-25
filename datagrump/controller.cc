@@ -9,7 +9,6 @@ using namespace std;
 Controller::Controller( const bool debug )
   : debug_( debug )
   , the_window_size(16)
-  , skewed_lowest_owt(99999)
   , lowest_rtt(99999)
 {}
 
@@ -48,18 +47,10 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
 {
-    int64_t skewed_owt = recv_timestamp_acked - send_timestamp_acked;
-    if (skewed_owt < skewed_lowest_owt)
-        skewed_lowest_owt = skewed_owt;
+    uint64_t rtt = timestamp_ack_received - send_timestamp_acked;
+    lowest_rtt = min( rtt, lowest_rtt );
 
-    double rtt =  timestamp_ack_received - send_timestamp_acked;
-    if (rtt < lowest_rtt)
-        lowest_rtt = rtt;
-
-    double est_lowest_owt = (lowest_rtt/2);
-    double est_owt = (skewed_owt - skewed_lowest_owt) + est_lowest_owt;
-
-    if (est_owt > 1.45 * est_lowest_owt)
+    if ( double(rtt) > 1.45 * double(lowest_rtt) )
         the_window_size -= .25;
     else
         the_window_size += .25;
