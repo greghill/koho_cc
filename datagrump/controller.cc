@@ -92,8 +92,8 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 
     if (the_window_size < 2) {
         the_window_size = 2;
-    } else if (the_window_size > 1000) {
-        the_window_size = 1000;
+    } else if (the_window_size > 10000) {
+        the_window_size = 10000;
     }
 
   if ( debug_ ) {
