@@ -54,6 +54,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
                                /* when the ack was received (by sender) */
 {
     while (datagram_list_.front().second + MAX_REORDER_MS < send_timestamp_acked) {
+        // packet assumed lost
         datagram_list_.pop_front();
         the_window_size -= .25;
     }
@@ -75,25 +76,25 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
         skewed_lowest_owt = skewed_owt;
 
     double rtt =  timestamp_ack_received - send_timestamp_acked;
-    if (rtt < lowest_rtt) {
-        lowest_rtt = rtt;
-    }
+    lowest_rtt = std::min( lowest_rtt, rtt );
 
-    double est_lowest_owt = (lowest_rtt/2);
-    double est_owt = (skewed_owt - skewed_lowest_owt) + est_lowest_owt;
+    double est_lowest_owt = lowest_rtt / 2;
+    double est_owt = ( skewed_owt - skewed_lowest_owt ) + est_lowest_owt;
 
     double limit = 1.45 * est_lowest_owt;
-    //limit = std::min( limit, est_lowest_owt + 80.);
     limit = std::max( limit, est_lowest_owt + 10.);
-    if (est_owt > limit)
-        the_window_size -= .25;
-    else
-        the_window_size += .25;
 
-    if (the_window_size < 2)
+    if (est_owt > limit) {
+        the_window_size -= .25;
+    } else {
+        the_window_size += .25;
+    }
+
+    if (the_window_size < 2) {
         the_window_size = 2;
-    else if (the_window_size > 1000)
+    } else if (the_window_size > 1000) {
         the_window_size = 1000;
+    }
 
   if ( debug_ ) {
     cerr << "At time " << timestamp_ack_received
