@@ -56,7 +56,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     while (datagram_list_.front().second + MAX_REORDER_MS < send_timestamp_acked) {
         // packet assumed lost
         datagram_list_.pop_front();
-        the_window_size -= .25;
+        the_window_size -= 1.25;
     }
 
     auto it = datagram_list_.begin();
