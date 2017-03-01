@@ -15,7 +15,6 @@ private:
   double skewed_lowest_owt;
   double lowest_rtt;
   std::list< std::pair<uint64_t, uint64_t> > datagram_list_;
-  uint64_t max_reorder_ms;
 
 public:
   /* Public interface for the congestion controller */

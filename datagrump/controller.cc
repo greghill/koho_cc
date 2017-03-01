@@ -5,6 +5,8 @@
 
 using namespace std;
 
+const uint64_t MAX_REORDER_MS = 5;
+
 /* Default constructor */
 Controller::Controller( const bool debug )
   : debug_( debug )
@@ -12,7 +14,6 @@ Controller::Controller( const bool debug )
   , skewed_lowest_owt(99999)
   , lowest_rtt(99999)
   , datagram_list_()
-  , max_reorder_ms(20)
 {}
 
 /* Get current window size, in datagrams */
@@ -52,7 +53,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
 {
-    while (datagram_list_.front().second + max_reorder_ms < send_timestamp_acked) {
+    while (datagram_list_.front().second + MAX_REORDER_MS < send_timestamp_acked) {
         datagram_list_.pop_front();
         the_window_size -= .25;
     }
@@ -76,7 +77,6 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     double rtt =  timestamp_ack_received - send_timestamp_acked;
     if (rtt < lowest_rtt) {
         lowest_rtt = rtt;
-        max_reorder_ms = (rtt + 10) / 2;
     }
 
     double est_lowest_owt = (lowest_rtt/2);
