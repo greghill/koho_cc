@@ -56,7 +56,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     while (datagram_list_.front().second + MAX_REORDER_MS < send_timestamp_acked) {
         // packet assumed lost
         datagram_list_.pop_front();
-        the_window_size -= 1.25;
+        the_window_size -= 1.5;
     }
 
     auto it = datagram_list_.begin();
@@ -81,7 +81,7 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     double est_lowest_owt = lowest_rtt / 2;
     double est_owt = ( skewed_owt - skewed_lowest_owt ) + est_lowest_owt;
 
-    double limit = 1.25 * est_lowest_owt + 15;
+    double limit = est_lowest_owt + 30;
 
     if ( est_owt > limit ) {
         the_window_size -= .25;
