@@ -53,18 +53,18 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
 			       const uint64_t timestamp_ack_received )
                                /* when the ack was received (by sender) */
 {
-    while (datagram_list_.front().second + MAX_REORDER_MS < send_timestamp_acked) {
+    while ( datagram_list_.front().second + MAX_REORDER_MS < send_timestamp_acked ) {
         // packet assumed lost
         datagram_list_.pop_front();
         the_window_size -= 1.5;
     }
 
     auto it = datagram_list_.begin();
-    while (it != datagram_list_.end()) {
-        if (it->first == sequence_number_acked) {
-            it = datagram_list_.erase(it);
+    while ( it != datagram_list_.end() ) {
+        if ( it->first == sequence_number_acked ) {
+            it = datagram_list_.erase( it );
             break;
-        } else if (it->first > sequence_number_acked) {
+        } else if ( it->first > sequence_number_acked ) {
             break;
         } else {
             it++;
@@ -72,8 +72,9 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     }
 
     int64_t skewed_owt = recv_timestamp_acked - send_timestamp_acked;
-    if (skewed_owt < skewed_lowest_owt)
+    if ( skewed_owt < skewed_lowest_owt ) {
         skewed_lowest_owt = skewed_owt;
+    }
 
     double rtt =  timestamp_ack_received - send_timestamp_acked;
     lowest_rtt = std::min( lowest_rtt, rtt );
@@ -81,17 +82,15 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     double est_lowest_owt = lowest_rtt / 2;
     double est_owt = ( skewed_owt - skewed_lowest_owt ) + est_lowest_owt;
 
-    double limit = est_lowest_owt + 30;
-
-    if ( est_owt > limit ) {
+    if ( est_owt > est_lowest_owt + 25. ) {
         the_window_size -= .25;
     } else {
         the_window_size += .25;
     }
 
-    if (the_window_size < 2) {
+    if ( the_window_size < 2 ) {
         the_window_size = 2;
-    } else if (the_window_size > 10000) {
+    } else if ( the_window_size > 10000 ) {
         the_window_size = 10000;
     }
 
