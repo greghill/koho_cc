@@ -9,7 +9,9 @@
 class Controller
 {
 private:
-  bool debug_; /* Enables debugging output */
+  const double delay_window_delta_;
+  const double delay_threshold_;
+  const double loss_window_delta_;
 
   double the_window_size;
   double skewed_lowest_owt;
@@ -22,7 +24,7 @@ public:
      the call site as well (in sender.cc) */
 
   /* Default constructor */
-  Controller( const bool debug );
+  Controller( const double delay_window_delta, const double delay_threshold, const double loss_window_delta );
 
   /* Get current window size, in datagrams */
   unsigned int window_size( void );

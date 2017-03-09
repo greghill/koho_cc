@@ -11,6 +11,26 @@
 using namespace std;
 using namespace PollerShortNames;
 
+double myatof( const string & str )
+{
+    if ( str.empty() ) {
+        throw runtime_error( "Invalid floating-point string: empty" );
+    }
+
+    char *end;
+
+    errno = 0;
+    double ret = strtod( str.c_str(), &end );
+
+    if ( errno != 0 ) {
+        throw runtime_error( "strtod" );
+    } else if ( end != str.c_str() + str.size() ) {
+        throw runtime_error( "Invalid floating-point number: " + str );
+    }
+
+    return ret;
+}
+
 /* simple sender class to handle the accounting */
 class DatagrumpSender
 {
@@ -31,7 +51,8 @@ private:
 
 public:
   DatagrumpSender( const char * const host, const char * const port,
-		   const bool debug );
+          const double delay_window_delta, const double delay_threshold,
+          const double loss_window_delta );
   int loop( void );
 };
 
@@ -42,27 +63,27 @@ int main( int argc, char *argv[] )
     abort();
   }
 
-  bool debug = false;
-  if ( argc == 4 and string( argv[ 3 ] ) == "debug" ) {
-    debug = true;
-  } else if ( argc == 3 ) {
-    /* do nothing */
-  } else {
-    cerr << "Usage: " << argv[ 0 ] << " HOST PORT [debug]" << endl;
+  if ( argc != 6) {
+    cerr << "Usage: " << argv[ 0 ] << " HOST PORT delay_window_delta delay_threshold loss_window_delta" << endl;
     return EXIT_FAILURE;
   }
 
   /* create sender object to handle the accounting */
   /* all the interesting work is done by the Controller */
-  DatagrumpSender sender( argv[ 1 ], argv[ 2 ], debug );
+  const double delay_window_delta = myatof( argv[ 3 ] );
+  const double delay_threshold = myatof( argv[ 4 ] );
+  const double loss_window_delta = myatof( argv[ 5 ] );
+  DatagrumpSender sender( argv[ 1 ], argv[ 2 ], delay_window_delta, delay_threshold, loss_window_delta );
   return sender.loop();
 }
 
 DatagrumpSender::DatagrumpSender( const char * const host,
 				  const char * const port,
-				  const bool debug )
+          const double delay_window_delta,
+          const double delay_threshold,
+          const double loss_window_delta )
   : socket_(),
-    controller_( debug ),
+    controller_( delay_window_delta, delay_threshold, loss_window_delta ),
     sequence_number_( 0 ),
     next_ack_expected_( 0 )
 {
