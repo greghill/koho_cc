@@ -31,7 +31,7 @@ if ( defined $ENV{ 'DISPLAY' } ) {
 
 push @command, qw{--once --uplink-log=/tmp/contest_uplink_log -- sh -c};
 
-push @command, q{./sender $MAHIMAHI_BASE 9090};
+push @command, q{./sender $MAHIMAHI_BASE 9090 .3 15 1.05};
 
 # for the contest, we will send data over Verizon's downlink
 # (datagrump sender's uplink)
@@ -55,17 +55,17 @@ system q{mm-throughput-graph 500 /tmp/contest_uplink_log > /dev/null}
 print "\n";
 
 # gzip logfile
-print q{Uploading data to server...};
-
-my $www = LWP::UserAgent->new();
-my $request = POST 'http://cs344g.keithw.org/cgi-bin/6829/upload-data',
-  Content_Type => 'multipart/form-data',
-  Content => [contents => ['/tmp/contest_uplink_log', $username]];
-
-my $response = $www->request( $request );
-
-print qq{ done.\n\n};
-
-print $response->decoded_content;
-
-print "\n";
+#print q{Uploading data to server...};
+#
+#my $www = LWP::UserAgent->new();
+#my $request = POST 'http://cs344g.keithw.org/cgi-bin/6829/upload-data',
+#  Content_Type => 'multipart/form-data',
+#  Content => [contents => ['/tmp/contest_uplink_log', $username]];
+#
+#my $response = $www->request( $request );
+#
+#print qq{ done.\n\n};
+#
+#print $response->decoded_content;
+#
+#print "\n";
