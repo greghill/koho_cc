@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 
 #include "controller.hh"
 #include "timestamp.hh"
@@ -8,15 +9,19 @@ using namespace std;
 const uint64_t MAX_REORDER_MS = 5;
 
 /* Default constructor */
-Controller::Controller( const double delay_window_delta, const double delay_threshold, const double loss_window_delta )
-  : delay_window_delta_( delay_window_delta )
-  , delay_threshold_( delay_threshold )
+Controller::Controller( const double up_delay_threshold, const double up_delay_window_delta, const double down_delay_threshold, const double down_delay_window_delta, const double loss_window_delta )
+  : up_delay_threshold_( up_delay_threshold )
+  , up_delay_window_delta_( up_delay_window_delta )
+  , down_delay_threshold_( down_delay_threshold )
+  , down_delay_window_delta_( down_delay_window_delta )
   , loss_window_delta_( loss_window_delta )
   , the_window_size(16)
   , skewed_lowest_owt(99999)
   , lowest_rtt(99999)
   , datagram_list_()
-{}
+{
+    assert( up_delay_threshold <= down_delay_threshold );
+}
 
 /* Get current window size, in datagrams */
 unsigned int Controller::window_size( void )
@@ -72,10 +77,12 @@ void Controller::ack_received( const uint64_t sequence_number_acked,
     double est_lowest_owt = lowest_rtt / 2;
     double est_owt = ( skewed_owt - skewed_lowest_owt ) + est_lowest_owt;
 
-    if ( est_owt > est_lowest_owt + delay_threshold_ ) {
-        the_window_size -= delay_window_delta_;
-    } else {
-        the_window_size += delay_window_delta_;
+    if ( est_owt <= est_lowest_owt + up_delay_threshold_ ) {
+        the_window_size += up_delay_window_delta_;
+    }
+
+    if ( est_owt >= est_lowest_owt + down_delay_threshold_ ) {
+        the_window_size -= down_delay_window_delta_;
     }
 
     if ( the_window_size < 2 ) {

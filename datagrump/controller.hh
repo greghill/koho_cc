@@ -9,8 +9,10 @@
 class Controller
 {
 private:
-  const double delay_window_delta_;
-  const double delay_threshold_;
+  const double up_delay_threshold_;
+  const double up_delay_window_delta_;
+  const double down_delay_threshold_;
+  const double down_delay_window_delta_;
   const double loss_window_delta_;
 
   double the_window_size;
@@ -24,7 +26,7 @@ public:
      the call site as well (in sender.cc) */
 
   /* Default constructor */
-  Controller( const double delay_window_delta, const double delay_threshold, const double loss_window_delta );
+  Controller( const double up_delay_threshold, const double up_delay_window_delta, const double down_delay_threshold, const double down_delay_window_delta, const double loss_window_delta );
 
   /* Get current window size, in datagrams */
   unsigned int window_size( void );

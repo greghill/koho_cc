@@ -51,7 +51,8 @@ private:
 
 public:
   DatagrumpSender( const char * const host, const char * const port,
-          const double delay_window_delta, const double delay_threshold,
+          const double up_delay_threshold, const double up_delay_window_delta,
+          const double down_delay_threshold, const double down_delay_window_delta,
           const double loss_window_delta );
   int loop( void );
 };
@@ -63,27 +64,26 @@ int main( int argc, char *argv[] )
     abort();
   }
 
-  if ( argc != 6) {
-    cerr << "Usage: " << argv[ 0 ] << " HOST PORT delay_window_delta delay_threshold loss_window_delta" << endl;
+  if ( argc != 8) {
+    cerr << "Usage: " << argv[ 0 ] << " HOST PORT up_delay_threshold up_delay_window_delta down_delay_threshold down_delay_window_delta loss_window_delta" << endl;
     return EXIT_FAILURE;
   }
 
   /* create sender object to handle the accounting */
   /* all the interesting work is done by the Controller */
-  const double delay_window_delta = myatof( argv[ 3 ] );
-  const double delay_threshold = myatof( argv[ 4 ] );
-  const double loss_window_delta = myatof( argv[ 5 ] );
-  DatagrumpSender sender( argv[ 1 ], argv[ 2 ], delay_window_delta, delay_threshold, loss_window_delta );
+  DatagrumpSender sender( argv[ 1 ], argv[ 2 ], myatof( argv[ 3 ] ), myatof( argv[ 4 ] ), myatof( argv[ 5 ] ), myatof( argv[ 6 ] ), myatof( argv[ 7 ] ) );
   return sender.loop();
 }
 
 DatagrumpSender::DatagrumpSender( const char * const host,
 				  const char * const port,
-          const double delay_window_delta,
-          const double delay_threshold,
+          const double up_delay_threshold,
+          const double up_delay_window_delta,
+          const double down_delay_threshold,
+          const double down_delay_window_delta,
           const double loss_window_delta )
   : socket_(),
-    controller_( delay_window_delta, delay_threshold, loss_window_delta ),
+    controller_( up_delay_threshold, up_delay_window_delta, down_delay_threshold, down_delay_window_delta, loss_window_delta ),
     sequence_number_( 0 ),
     next_ack_expected_( 0 )
 {
